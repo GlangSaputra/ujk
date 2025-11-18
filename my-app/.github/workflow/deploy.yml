@@ -1,0 +1,85 @@
+name: 🚀 Deploy to VPS - BNSP Project
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v3
+
+    - name: 🔑 Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: 103.23.199.68
+        username: bnsp4
+        password: Excellent!123@#
+        script: |
+          echo "=== 🚀 STARTING DEPLOYMENT ==="
+          echo "📅 Date: $(date)"
+          echo "🔧 Branch: $GITHUB_REF"
+          
+          # Navigate to project directory
+          cd /home/bnsp4/my-app
+          echo "📁 Current directory: $(pwd)"
+          
+          # Pull latest code from GitHub
+          echo "📥 Pulling latest code from GitHub..."
+          git fetch origin
+          git reset --hard origin/main
+          
+          # List files to verify
+          echo "📋 Files in directory:"
+          ls -la
+          
+          # Build Docker image
+          echo "🐳 Building Docker image..."
+          docker build -t my-app:latest .
+          
+          # Stop and remove old container if exists
+          echo "🛑 Stopping old container..."
+          docker stop my-app-container || true
+          docker rm my-app-container || true
+          
+          # Run new container
+          echo "▶️ Starting new container..."
+          docker run -d \
+            --name my-app-container \
+            -p 80:80 \
+            --restart unless-stopped \
+            my-app:latest
+          
+          # Wait for container to start
+          echo "⏳ Waiting for container to start..."
+          sleep 10
+          
+          # Verify deployment
+          echo "✅ Verifying deployment..."
+          docker ps
+          
+          # Test website
+          echo "🌐 Testing website..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost || echo "000")
+          echo "📊 HTTP Status: $HTTP_STATUS"
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "🎉 DEPLOYMENT SUCCESSFUL!"
+            echo "📍 Website: http://103.23.199.68"
+          else
+            echo "⚠️ Website might be starting... Check logs:"
+            docker logs my-app-container
+          fi
+          
+          echo "=== ✅ DEPLOYMENT COMPLETED ==="
+
+    - name: 📊 Deployment Status
+      run: |
+        echo "🤖 GitHub Actions workflow completed"
+        echo "🔍 Check website: http://103.23.199.68"
+        echo "📈 Check monitoring: http://103.23.199.68:3000"
